@@ -107,7 +107,7 @@ class SelectorDIC(ModelSelector):
     DIC = log(P(X(i)) - 1/(M-1)SUM(log(P(X(all but i))
     '''
 
-    def get_model_score(self, n):
+    def get_dic_score(self, n):
         model = self.base_model(n)
         scores = []
         for word, (X, l) in self.hwords.items():
@@ -122,15 +122,20 @@ class SelectorDIC(ModelSelector):
         """
         try:
             warnings.filterwarnings("ignore", category=DeprecationWarning)
-            best_score_so_far = float("-Inf")
-            for n_components in range(self.min_n_components, self.max_n_components + 1):
-                model_score = self.get_model_score(n_components)
-                if model_score > best_score_so_far:
+            best_score = float("-Inf")
+            best_model = self.base_model(self.n_constant)
+
+            for num_components in range(self.min_n_components, self.max_n_components + 1):
+                score = self.get_dic_score(num_components)
+
+                if score > best_score:
                     self.X, self.lengths = combine_sequences(range(len(self.sequences)), self.sequences)
-                    model = self.base_model(n_components)
-                    best_score_so_far = model_score
-            return model
-        except Exception:
+                    best_model = self.base_model(num_components)
+                    best_score = score
+
+            return best_model
+
+        except (AttributeError, TypeError, ValueError):
             return self.base_model(self.n_constant)
 
 
