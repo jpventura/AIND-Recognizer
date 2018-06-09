@@ -68,16 +68,33 @@ class SelectorBIC(ModelSelector):
     Bayesian information criteria: BIC = -2 * logL + p * logN
     """
 
+    def get_bic_score(self, n):
+        model = self.base_model(n)
+        score = model.score(self.X, self.lengths)
+        p = (n ** 2) + 2 * len(self.X[0]) * n - 1
+        return model, -2 * score + p * np.log(np.sum(self.lengths))
+
     def select(self):
         """ select the best model for self.this_word based on
         BIC score for n between self.min_n_components and self.max_n_components
-
         :return: GaussianHMM object
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
+        best_score = float("inf")
+        best_model = None
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        for num_components in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model, bic_score = self.get_bic_score(num_components)
+
+                if bic_score < best_score:
+                    best_score = bic_score
+                    best_model = model
+
+            except (AttributeError, TypeError, ValueError):
+                return self.base_model(self.n_constant)
+
+        return best_model
 
 
 class SelectorDIC(ModelSelector):
