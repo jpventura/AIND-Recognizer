@@ -107,11 +107,31 @@ class SelectorDIC(ModelSelector):
     DIC = log(P(X(i)) - 1/(M-1)SUM(log(P(X(all but i))
     '''
 
-    def select(self):
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
+    def get_model_score(self, n):
+        model = self.base_model(n)
+        scores = []
+        for word, (X, l) in self.hwords.items():
+            if word != self.this_word:
+                scores.append(model.score(X, l))
+        return model.score(self.X, self.lengths) - np.mean(scores)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+    def select(self):
+        """ select based on DIC
+
+        :return: GaussianHMM object
+        """
+        try:
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            best_score_so_far = float("-Inf")
+            for n_components in range(self.min_n_components, self.max_n_components + 1):
+                model_score = self.get_model_score(n_components)
+                if model_score > best_score_so_far:
+                    self.X, self.lengths = combine_sequences(range(len(self.sequences)), self.sequences)
+                    model = self.base_model(n_components)
+                    best_score_so_far = model_score
+            return model
+        except Exception:
+            return self.base_model(self.n_constant)
 
 
 class SelectorCV(ModelSelector):
