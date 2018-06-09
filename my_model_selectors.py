@@ -1,5 +1,3 @@
-import math
-import statistics
 import warnings
 
 import numpy as np
@@ -147,5 +145,25 @@ class SelectorCV(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection using CV
-        raise NotImplementedError
+        best_score = float('-inf')
+        best_model = None
+
+        for num_components in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                scores = []
+
+                for cv_train, cv_test in KFold(n_splits=2)(self.sequences):
+                    self.X, self.lengths = combine_sequences(cv_train, self.sequences)
+                    model = self.base_model(num_components)
+                    x, length = combine_sequences(cv_test, self.sequences)
+                    scores.append(model.score(x, length))
+
+                score = np.mean(scores)
+                if score > best_score:
+                    best_score = score
+                    best_model = model
+
+            except TypeError:
+                continue
+
+        return best_model if best_model else self.base_model(self.n_constant)
